@@ -1,0 +1,70 @@
+FROM openjdk:8u181-alpine
+
+LABEL MAINTAINER matank@jfrog.com
+
+USER root
+
+# Set vars
+ENV ARTIFACTORY_USER_NAME=artifactory \
+    ARTIFACTORY_USER_ID=1030 \
+    ARTIFACTORY_HOME=/opt/jfrog/artifactory \
+    ARTIFACTORY_DATA=/var/opt/jfrog/artifactory \
+    ARTIFACTORY_EXTRA_CONF=/artifactory_extra_conf \
+    ARTIFACTORY_VERSION=6.5.2 \
+    RECOMMENDED_MAX_OPEN_FILES=32000 \
+    MIN_MAX_OPEN_FILES=10000 \
+    RECOMMENDED_MAX_OPEN_PROCESSES=1024 \
+    POSTGRESQL_VERSION=42.2.5
+
+# Copy the entrypoint and Dockerfile
+COPY entrypoint-artifactory.sh /
+COPY Dockerfile.alpine /docker/artifactory-pro/Dockerfile
+
+# Alpine Update and install some needed packages
+RUN set -x && \
+    apk update && \
+    apk upgrade && \
+    apk add bash curl && \
+    rm -rf /var/cache/apk/*
+
+# Create user, data directory and extract artifactory zip and create needed softlinks
+RUN set -x && \
+    ARTIFACTORY_BASEDIR=`dirname ${ARTIFACTORY_HOME}` && \
+    mkdir -p ${ARTIFACTORY_BASEDIR} && \
+    addgroup -g ${ARTIFACTORY_USER_ID} ${ARTIFACTORY_USER_NAME} && \
+    adduser -D -H -h ${ARTIFACTORY_HOME} -u ${ARTIFACTORY_USER_ID} -G ${ARTIFACTORY_USER_NAME} ${ARTIFACTORY_USER_NAME} && \
+    #useradd -M -s /usr/sbin/nologin --uid ${ARTIFACTORY_USER_ID} --user-group ${ARTIFACTORY_USER_NAME} -d ${ARTIFACTORY_HOME} && \
+    mkdir -p ${ARTIFACTORY_DATA} && \
+    chown -R ${ARTIFACTORY_USER_NAME}:${ARTIFACTORY_USER_NAME} ${ARTIFACTORY_DATA} && \
+    curl -sSL -o /tmp/artifactory.zip "https://bintray.com/standAloneDownload/downloadArtifact?product=artifactory&artifactPath=/jfrog/artifactory-pro/org/artifactory/pro/jfrog-artifactory-pro/${ARTIFACTORY_VERSION}/jfrog-artifactory-pro-${ARTIFACTORY_VERSION}.zip&callback_id=anonymous" && \
+    unzip -q /tmp/artifactory.zip -d ${ARTIFACTORY_BASEDIR} && \
+    mv ${ARTIFACTORY_HOME}*/ ${ARTIFACTORY_HOME}/ && \
+    rm -f /tmp/artifactory.zip && \
+    mv ${ARTIFACTORY_HOME}/etc ${ARTIFACTORY_HOME}/etc.orig/ && \
+    rm -rf ${ARTIFACTORY_HOME}/logs && \
+    ln -s ${ARTIFACTORY_DATA}/etc ${ARTIFACTORY_HOME}/etc && \
+    ln -s ${ARTIFACTORY_DATA}/data ${ARTIFACTORY_HOME}/data && \
+    ln -s ${ARTIFACTORY_DATA}/logs ${ARTIFACTORY_HOME}/logs && \
+    ln -s ${ARTIFACTORY_DATA}/backup ${ARTIFACTORY_HOME}/backup && \
+    ln -s ${ARTIFACTORY_DATA}/access ${ARTIFACTORY_HOME}/access && \
+    ln -s ${ARTIFACTORY_DATA}/replicator ${ARTIFACTORY_HOME}/replicator && \
+    chown -R ${ARTIFACTORY_USER_NAME}:${ARTIFACTORY_USER_NAME} ${ARTIFACTORY_HOME} && \
+    mkdir -p /tmp/plugins && \
+    curl -sSL -o ${ARTIFACTORY_HOME}/tomcat/lib/postgresql-${POSTGRESQL_VERSION}.jar https://jdbc.postgresql.org/download/postgresql-${POSTGRESQL_VERSION}.jar && \
+    chmod +x ${ARTIFACTORY_HOME}/bin/*.sh ${ARTIFACTORY_HOME}/tomcat/bin/*.sh /entrypoint-artifactory.sh
+
+# Add internalUser plugin
+COPY plugins/internalUser.groovy /tmp/plugins/internalUser.groovy
+
+# Expose Tomcat's port
+EXPOSE 8081
+
+# The user that will run the container and artifactory
+USER ${ARTIFACTORY_USER_NAME}
+
+# Default mounts for data and extra config directories
+VOLUME ${ARTIFACTORY_DATA}
+VOLUME ${ARTIFACTORY_EXTRA_CONF}
+
+# Start the simple standalone mode of Artifactory
+ENTRYPOINT ["/entrypoint-artifactory.sh"]
