@@ -50,7 +50,7 @@ warn () {
 # Print on container startup information about Dockerfile location
 printDockerFileLocation() {
     logger "Dockerfile for this image can found inside the container."
-    logger "To view the Dockerfile: 'cat /docker/artifactory-pro/Dockerfile.artifactory'."
+    logger "To view the Dockerfile: 'cat /docker/artifactory-pro/Dockerfile'."
 }
 
 # Check the max open files and open processes set on the system
