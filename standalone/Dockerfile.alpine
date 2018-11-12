@@ -24,7 +24,7 @@ COPY Dockerfile.alpine /docker/artifactory-pro/Dockerfile
 RUN set -x && \
     apk update && \
     apk upgrade && \
-    apk add bash curl && \
+    apk add bash curl net-tools procps && \
     rm -rf /var/cache/apk/*
 
 # Create user, data directory and extract artifactory zip and create needed softlinks
