@@ -5,12 +5,12 @@ LABEL MAINTAINER matank@jfrog.com
 USER root
 
 # Set vars
-ENV ARTIFACTORY_USER_NAME=artifactory \
+ENV ARTIFACTORY_VERSION=6.5.3 \
+    ARTIFACTORY_USER_NAME=artifactory \
     ARTIFACTORY_USER_ID=1030 \
     ARTIFACTORY_HOME=/opt/jfrog/artifactory \
     ARTIFACTORY_DATA=/var/opt/jfrog/artifactory \
     ARTIFACTORY_EXTRA_CONF=/artifactory_extra_conf \
-    ARTIFACTORY_VERSION=6.5.2 \
     RECOMMENDED_MAX_OPEN_FILES=32000 \
     MIN_MAX_OPEN_FILES=10000 \
     RECOMMENDED_MAX_OPEN_PROCESSES=1024 \
